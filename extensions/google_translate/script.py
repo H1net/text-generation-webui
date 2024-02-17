@@ -1,7 +1,10 @@
+import html
+
 import gradio as gr
 from deep_translator import GoogleTranslator
 
 params = {
+    "activate": True,
     "language string": "ja",
 }
 
@@ -13,6 +16,8 @@ def input_modifier(string):
     This function is applied to your text inputs before
     they are fed into the model.
     """
+    if not params['activate']:
+        return string
 
     return GoogleTranslator(source=params['language string'], target='en').translate(string)
 
@@ -21,8 +26,11 @@ def output_modifier(string):
     """
     This function is applied to the model outputs.
     """
+    if not params['activate']:
+        return string
 
-    return GoogleTranslator(source='en', target=params['language string']).translate(string)
+    translated_str = GoogleTranslator(source='en', target=params['language string']).translate(html.unescape(string))
+    return html.escape(translated_str)
 
 
 def bot_prefix_modifier(string):
@@ -40,7 +48,12 @@ def ui():
     language_name = list(language_codes.keys())[list(language_codes.values()).index(params['language string'])]
 
     # Gradio elements
-    language = gr.Dropdown(value=language_name, choices=[k for k in language_codes], label='Language')
+    with gr.Row():
+        activate = gr.Checkbox(value=params['activate'], label='Activate translation')
+
+    with gr.Row():
+        language = gr.Dropdown(value=language_name, choices=[k for k in language_codes], label='Language')
 
     # Event functions to update the parameters in the backend
+    activate.change(lambda x: params.update({"activate": x}), activate, None)
     language.change(lambda x: params.update({"language string": language_codes[x]}), language, None)
